@@ -1,0 +1,5 @@
+*.cache
+*.suo
+*.manifest
+bin/
+obj/
