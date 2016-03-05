@@ -59,6 +59,7 @@
     <Compile Include="Set\CardColor.cs" />
     <Compile Include="Set\Constants.cs" />
     <Compile Include="Set\Extensions.cs" />
+    <Compile Include="Set\ImageHelper.cs" />
     <Compile Include="Set\SetGame.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>

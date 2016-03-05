@@ -124,21 +124,34 @@ namespace Set_Game_Pattern_Matcher
             Rectangle temp;
             List<Rectangle> sets = new List<Rectangle>();
 
-            for (int x = 0; x < b.Width; x++)
-            {
-                for (int y = 0; y < b.Height; y++)
-                {
-                    if (b.IsWhite(x, y))
-                    {
-                        temp = TraceSet(b, x, y);
+            BitmapData bmData = b.LockBits(new Rectangle(0, 0, b.Width, b.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            int stride = bmData.Stride;
 
-                        if (temp.Area() >= Constants.minArea && temp.Width >= Constants.minDimension && temp.Height > Constants.minDimension)
+            unsafe
+            {
+                byte* p = (byte*)(void*)bmData.Scan0;
+                int nOffset = stride - b.Width * 3;
+
+                for (int x = 0; x < b.Width; x++)
+                {
+                    for (int y = 0; y < b.Height; y++)
+                    {
+                        int i = ImageHelper.GetBmpDataIndex(x, y, stride);
+
+                        if (ImageHelper.IsWhite(p, i))
                         {
-                            sets.Add(temp);
+                            temp = TraceSet(p, x, y, b.Width, b.Height, stride);
+
+                            if (temp.Area() >= Constants.minArea && temp.Width >= Constants.minDimension && temp.Height > Constants.minDimension)
+                            {
+                                sets.Add(temp);
+                            }
                         }
                     }
                 }
             }
+
+            b.UnlockBits(bmData);
 
             RemoveOverlaps(sets);
             KeepTopSets(sets, numberOfSets);
@@ -223,30 +236,30 @@ namespace Set_Game_Pattern_Matcher
             }
         }
 
-        private Rectangle TraceSet(Bitmap b, int startx, int starty)
+        private unsafe Rectangle TraceSet(byte* b, int startx, int starty, int width, int height, int stride)
         {
-            int right = b.Width - 1;
+            int right = width - 1;
             for (int x = startx; x < right; x++)
             {
-                if (!b.IsWhite(x, starty))
+                if (!ImageHelper.IsWhite(b, x, starty, stride))
                 {
                     right = x;
                 }
             }
 
-            int bottom = b.Height - 1;
+            int bottom = height - 1;
             for (int y = starty; y < bottom; y++)
             {
-                if (!b.IsWhite(startx, y))
+                if (!ImageHelper.IsWhite(b, startx, y, stride))
                 {
                     bottom = y;
                 }
             }
 
-            // Move up-right diagonally until we hit a white square
+            // Move up-left diagonally until we hit a white square
             for (int i = 0; i < Math.Min(right - startx - 1, bottom - starty - 1); i++)
             {
-                if (b.IsWhite(right - i, bottom - i))
+                if (ImageHelper.IsWhite(b, right - i, bottom - i, stride))
                 {
                     right -= i;
                     bottom -= i;
