@@ -160,30 +160,30 @@ namespace ScottClayton.Image
                     bitmaps.RemoveAt(index);
                 }
 
-                //while (bitmaps.Count < numChars)
-                //{
-                //    for (double i = 3.0; i > 0 && bitmaps.Count < numChars; i -= 0.1)
-                //    {
-                //        //double i = 1.3;
-                //        for (int b = 0; b < bitmaps.Count; b++)
-                //        {
-                //            double acceptable = (((double)bmp.Width / (double)numChars) * i);
-                //            if (bitmaps[b].Image.Width > acceptable)
-                //            {
-                //                int ct = (int)Math.Round((double)bitmaps[b].Image.Width / ((double)sum / (double)numChars));
-                //                Bitmap[] splits = SplitInto(bitmaps[b].Image, ct < 2 ? 2 : ct);
-                //                bitmaps.RemoveAt(b);
+                while (bitmaps.Count < numChars)
+                {
+                    for (double i = 3.0; i > 0 && bitmaps.Count < numChars; i -= 0.1)
+                    {
+                        //double i = 1.3;
+                        for (int b = 0; b < bitmaps.Count; b++)
+                        {
+                            double acceptable = (((double)bmp.Width / (double)numChars) * i);
+                            if (bitmaps[b].Image.Width > acceptable)
+                            {
+                                int ct = (int)Math.Round((double)bitmaps[b].Image.Width / ((double)sum / (double)numChars));
+                                Bitmap[] splits = SplitInto(bitmaps[b].Image, ct < 2 ? 2 : ct);
+                                bitmaps.RemoveAt(b);
 
-                //                int xx = 0;
-                //                foreach (Bitmap b2 in splits)
-                //                {
-                //                    bitmaps.Insert(b + (xx++), new BLOB() { Image = CropMinimum(b2) });
-                //                }
-                //                break;
-                //            }
-                //        }
-                //    }
-                //}
+                                int xx = 0;
+                                foreach (Bitmap b2 in splits)
+                                {
+                                    bitmaps.Insert(b + (xx++), new BLOB() { Image = CropMinimum(b2) });
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
             }
 
             return bitmaps.Select(b => b.Image).ToList();

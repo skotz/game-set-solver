@@ -57,9 +57,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Segment\Segmenter.cs" />
     <Compile Include="Set\CardColor.cs" />
+    <Compile Include="Set\CardShape.cs" />
     <Compile Include="Set\Constants.cs" />
     <Compile Include="Set\Extensions.cs" />
     <Compile Include="Set\ImageHelper.cs" />
+    <Compile Include="Set\Pattern.cs" />
     <Compile Include="Set\SetGame.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
@@ -85,6 +87,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Patterns\diamond.png" />
+    <EmbeddedResource Include="Patterns\oval.png" />
+    <EmbeddedResource Include="Patterns\squiggle.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

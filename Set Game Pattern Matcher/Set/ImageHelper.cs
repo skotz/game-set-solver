@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -22,6 +24,29 @@ namespace Set_Game_Pattern_Matcher
         public static int GetBmpDataIndex(int x, int y, int stride)
         {
             return y * stride + x * 3;
+        }
+
+        public static Bitmap Copy(Bitmap image)
+        {
+            Bitmap bmp = new Bitmap(image.Width, image.Height);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.DrawImage(image, 0, 0, new Rectangle(0, 0, image.Width, image.Height), GraphicsUnit.Pixel);
+            }
+            return bmp;
+        }
+
+        public static Bitmap GetEmbeddedImage(string name)
+        {
+            foreach (string resource in Assembly.GetEntryAssembly().GetManifestResourceNames())
+            {
+                if (resource.ToLower().EndsWith(name.ToLower()))
+                {
+                    return (Bitmap)Bitmap.FromStream(Assembly.GetExecutingAssembly().GetManifestResourceStream(resource));
+                }
+            }
+
+            throw new Exception("Could not find embedded resource \"" + name + "\"");
         }
     }
 }
