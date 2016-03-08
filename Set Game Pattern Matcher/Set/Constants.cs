@@ -13,7 +13,7 @@ namespace Set_Game_Pattern_Matcher
         public const int variance = 64;
 
         // Settings for determining whether a rectangle is too small to be considered a card
-        public const int minDimension = 10;
-        public const int minArea = 100;
+        public const int minDimension = 40;
+        public const int minArea = minDimension * minDimension;
     }
 }

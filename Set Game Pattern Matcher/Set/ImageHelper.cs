@@ -36,6 +36,26 @@ namespace Set_Game_Pattern_Matcher
             return bmp;
         }
 
+        public static Bitmap Resize(Bitmap image, int maxDimention)
+        {
+            int newWidth = Math.Min(image.Width, maxDimention);
+            int newHeight = (int)((double)image.Height * ((double)newWidth / (double)image.Width));
+
+            if (newHeight > maxDimention)
+            {
+                newHeight = maxDimention;
+                newWidth = (int)((double)image.Width * ((double)newHeight / (double)image.Height));
+            }
+
+            Bitmap newImage = new Bitmap(newWidth, newHeight);
+            using (Graphics gc = Graphics.FromImage(newImage))
+            {
+                gc.DrawImage(image, new Rectangle(0, 0, newImage.Width, newImage.Height), new Rectangle(0, 0, image.Width, image.Height), GraphicsUnit.Pixel);
+            }
+
+            return newImage;
+        }
+
         public static Bitmap GetEmbeddedImage(string name)
         {
             foreach (string resource in Assembly.GetEntryAssembly().GetManifestResourceNames())

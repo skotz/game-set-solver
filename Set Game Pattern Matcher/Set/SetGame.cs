@@ -51,39 +51,43 @@ namespace Set_Game_Pattern_Matcher
         private int GetCardNumber(Bitmap img, CardColor color)
         {
             List<int> histogram = new List<int>();
-
-            //Segmenter seg = new Segmenter() { Image = img };
-            //seg.FloodFill(new Point(2, 2), 32, Color.White);
-            //seg.ColorFillBlobs(80, Color.White, 32);
-            //seg.ResizeRotateCut(true);
-
-            //img.Save("hist.png", ImageFormat.Png);
-
             int sum;
-            for (int x = 0; x < img.Width; x++)
+
+            BitmapData bmData = img.LockBits(new Rectangle(0, 0, img.Width, img.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            int stride = bmData.Stride;
+
+            unsafe
             {
-                sum = 0;
-                for (int y = 0; y < img.Height; y++)
+                byte* p = (byte*)(void*)bmData.Scan0;
+
+                for (int x = 0; x < img.Width; x++)
                 {
-                    Color c = img.GetPixel(x, y);
-                    if (!c.IsWhite())
+                    sum = 0;
+                    for (int y = 0; y < img.Height; y++)
                     {
-                        if (color == CardColor.Red)
+                        int i = ImageHelper.GetBmpDataIndex(x, y, stride);
+
+                        if (!ImageHelper.IsWhite(p, i))
                         {
-                            sum += c.R;
-                        }
-                        else if (color == CardColor.Green)
-                        {
-                            sum += c.G;
-                        }
-                        else if (color == CardColor.Blue)
-                        {
-                            sum += c.B;
+                            if (color == CardColor.Red)
+                            {
+                                sum += p[i + 2];
+                            }
+                            else if (color == CardColor.Green)
+                            {
+                                sum += p[i + 1];
+                            }
+                            else if (color == CardColor.Blue)
+                            {
+                                sum += p[i ];
+                            }
                         }
                     }
+                    histogram.Add(sum);
                 }
-                histogram.Add(sum);
             }
+
+            img.UnlockBits(bmData);
 
             bool lastZero = false;
             int sections = 0;
@@ -157,6 +161,10 @@ namespace Set_Game_Pattern_Matcher
 
         public void FindSets(Bitmap b, int numberOfSets = 12)
         {
+            b = ImageHelper.Resize(b, 600);
+
+            b.Save("resized.png", ImageFormat.Png);
+
             Rectangle temp;
             List<Rectangle> sets = new List<Rectangle>();
 
