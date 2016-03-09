@@ -379,22 +379,31 @@ namespace Set_Game_Pattern_Matcher
                 {
                     bool tall = r.Height > r.Width;
                     using (Bitmap card = new Bitmap(tall ? Constants.cardHeight : Constants.cardWidth, tall ? Constants.cardWidth : Constants.cardHeight))
-                    using (Graphics gc = Graphics.FromImage(card))
                     {
-                        gc.DrawImage(b, new Rectangle(0, 0, card.Width, card.Height), r, GraphicsUnit.Pixel);
-                        if (tall)
+                        using (Graphics gc = Graphics.FromImage(card))
                         {
-                            card.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                            gc.DrawImage(b, new Rectangle(0, 0, card.Width, card.Height), r, GraphicsUnit.Pixel);
+                            if (tall)
+                            {
+                                card.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                            }
                         }
 
-                        CardColor color = GetCardColor(card);
-                        int count = GetCardNumber(card);
-                        CardShape shape = GetCardShape(card);
-                        CardShading shade = GetCardShading(card, color);
-                        
-                        gc.DrawString(color.ToString()[0] + count.ToString() + shape.ToString()[0] + shade.ToString()[0], new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 1));
+                        // Re-initialize the graphics object in case we had to rotate it (to prevent cutoffs)
+                        using (Graphics gc = Graphics.FromImage(card))
+                        {
+                            CardColor color = GetCardColor(card);
+                            int count = GetCardNumber(card);
+                            CardShape shape = GetCardShape(card);
+                            CardShading shade = GetCardShading(card, color);
 
-                        card.Save("card-" + (cardNo++) + ".png", ImageFormat.Png);
+                            gc.DrawString(color.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 1));
+                            gc.DrawString(count.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 13));
+                            gc.DrawString(shape.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 25));
+                            gc.DrawString(shade.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 37));
+
+                            card.Save("card-" + (cardNo++) + ".png", ImageFormat.Png);
+                        }
                     }
 
                     g.DrawRectangle(Pens.Red, r);
