@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,43 +16,21 @@ namespace Set_Game_Pattern_Matcher
 
         private List<Pattern> shapePatterns;
 
-        private int test = 1;
+        int test = 1;
 
         public SetGame()
         {
             shapePatterns = Pattern.LoadPrimaryPatterns();
         }
 
-        private CardShape GetCardShape(Bitmap img, int count)
-        {
-            Bitmap copy = ImageHelper.Copy(img);
-
-            BlobSegmentMethod blob = new BlobSegmentMethod(10, 30, count);            
-            Segmenter seg = new Segmenter() { Image = copy };
-            seg.FloodFill(new Point(2, 2), 32, Color.White);
-            seg.ColorFillBlobs(80, Color.White, 32);
-
-            foreach (Bitmap pic in blob.Segment(copy, Constants.variance))
-            {
-                using (Bitmap pattern = new Bitmap(32, 64))
-                using (Graphics gc = Graphics.FromImage(pattern))
-                {
-                    gc.DrawImage(pic, new Rectangle(0, 0, pattern.Width, pattern.Height), new Rectangle(0, 0, pic.Width, pic.Height), GraphicsUnit.Pixel);
-
-                    pattern.Save("x-pic-" + (test++) + ".png", ImageFormat.Png);
-
-                    Pattern p = new Pattern(pattern);
-                    return p.GetClosestPattern(shapePatterns).Shape;
-                }
-            }
-
-            return CardShape.Squiggle;
-        }
-
-        private int GetCardNumber(Bitmap img, CardColor color)
+        /// <summary>
+        /// Get the shape of a card
+        /// </summary>
+        /// <param name="img">The image to determine the shape from</param>
+        /// <returns></returns>
+        private CardShape GetCardShape(Bitmap img)
         {
             List<int> histogram = new List<int>();
-            int sum;
 
             BitmapData bmData = img.LockBits(new Rectangle(0, 0, img.Width, img.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
             int stride = bmData.Stride;
@@ -60,53 +39,117 @@ namespace Set_Game_Pattern_Matcher
             {
                 byte* p = (byte*)(void*)bmData.Scan0;
 
-                for (int x = 0; x < img.Width; x++)
+                // Create a histogram that represents the number of white pixels from the left border on each line
+                for (int y = 0; y < img.Height; y++)
                 {
-                    sum = 0;
-                    for (int y = 0; y < img.Height; y++)
+                    for (int x = 0; x < img.Width; x++)
                     {
                         int i = ImageHelper.GetBmpDataIndex(x, y, stride);
 
                         if (!ImageHelper.IsWhite(p, i))
                         {
-                            if (color == CardColor.Red)
-                            {
-                                sum += p[i + 2];
-                            }
-                            else if (color == CardColor.Green)
-                            {
-                                sum += p[i + 1];
-                            }
-                            else if (color == CardColor.Blue)
-                            {
-                                sum += p[i ];
-                            }
+                            histogram.Add(x);
+                            break;
                         }
                     }
-                    histogram.Add(sum);
                 }
             }
 
             img.UnlockBits(bmData);
 
-            bool lastZero = false;
-            int sections = 0;
-            for (int i = 0; i < histogram.Count; i++)
+            // Group the histogram values into a buckets of averages
+            List<double> averages = new List<double>();
+            int sections = 4;
+            for (int i = 0; i < sections; i++)
             {
-                if (lastZero && histogram[i] != 0 && i + 1 < histogram.Count && histogram[i + 1] != 0 && i + 2 < histogram.Count && histogram[i + 2] != 0)
+                double sum = 0;
+                int actual = 0;
+                for (int x = i * (histogram.Count / sections); x <= (i + 1) * (histogram.Count / (double)sections) && x < histogram.Count; x++)
                 {
-                    lastZero = false;
+                    sum += histogram[x];
+                    actual++;
                 }
-                else if (!lastZero && histogram[i] == 0 && i + 1 < histogram.Count && histogram[i + 1] == 0 && i + 2 < histogram.Count && histogram[i + 2] == 0)
+                sum /= actual;
+                averages.Add(sum);
+            }
+
+            // Based on the data analysis of the histograms, these rules work quite well in determining the shape
+            if (averages[0] < averages[1] && averages[1] > averages[2] && averages[2] < averages[3])
+            {
+                return CardShape.Squiggle;
+            }
+            else if (averages[0] > averages[1] + 4 && averages[3] > averages[2] + 4)
+            {
+                return CardShape.Diamond;
+            }
+            else
+            {
+                return CardShape.Oval;
+            }
+
+            // File.WriteAllText("card-" + (test++) + ".txt", blah + "\r\n" + averages.Select(x => x.ToString("0.00")).Aggregate((c, n) => c + "\r\n" + n));
+        }
+
+        private int GetCardNumber(Bitmap img, CardColor color, bool fromRight = false)
+        {
+            List<int> histogram = new List<int>();
+
+            BitmapData bmData = img.LockBits(new Rectangle(0, 0, img.Width, img.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            int stride = bmData.Stride;
+
+            unsafe
+            {
+                byte* p = (byte*)(void*)bmData.Scan0;
+
+                // Create a histogram that represents the number of white pixels from the left border on each line
+                for (int y = 0; y < img.Height; y++)
                 {
-                    sections++;
-                    lastZero = true;
+                    for (int x = 0; x < img.Width / 2; x++)
+                    {
+                        int effectiveX = fromRight ? img.Width - 1 - x : x;
+                        int i = ImageHelper.GetBmpDataIndex(effectiveX, y, stride);
+
+                        if (!ImageHelper.IsWhite(p, i))
+                        {
+                            //p[i + 1] = 255;
+                            histogram.Add(x);
+                            break;
+                        }
+                        //else
+                        //{
+                        //    p[i + 2] = 255;
+                        //}
+                    }
                 }
             }
 
-            // File.WriteAllText("histogram.txt", histogram.Select(x => x.ToString()).Aggregate((c, n) => c + ", " + n));
+            img.UnlockBits(bmData);
 
-            return sections - 1;
+            double average = histogram.Count > 0 ? histogram.Average() : 0;
+
+            if (average > (Constants.cardWidth / 2) - 3 || histogram.Count < 5)
+            {
+                // Since our average indicates that nearly every pixel in the left half of the image is white, count again starting from the right
+                if (!fromRight)
+                {
+                    return GetCardNumber(img, color, true);
+                }
+            }
+            
+            if (average > 35.0)
+            {
+                return 1;
+            }
+            else if (average > 15.0)
+            {
+                return 2;
+            }
+            else
+            {
+                return 3;
+            }
+
+            // File.WriteAllText("card-" + (test++) + ".txt", blah + "\r\n" + average.ToString());
         }
 
         /// <summary>
@@ -205,7 +248,7 @@ namespace Set_Game_Pattern_Matcher
                 foreach (Rectangle r in sets)
                 {
                     bool tall = r.Height > r.Width;
-                    using (Bitmap card = new Bitmap(tall ? 100 : 150, tall ? 150 : 100))
+                    using (Bitmap card = new Bitmap(tall ? Constants.cardHeight : Constants.cardWidth, tall ? Constants.cardWidth : Constants.cardHeight))
                     using (Graphics gc = Graphics.FromImage(card))
                     {
                         gc.DrawImage(b, new Rectangle(0, 0, card.Width, card.Height), r, GraphicsUnit.Pixel);
@@ -216,17 +259,17 @@ namespace Set_Game_Pattern_Matcher
 
                         CardColor color = GetCardColor(card);
                         int count = GetCardNumber(card, color);
-                        CardShape shape = GetCardShape(card, count);
+                        CardShape shape = GetCardShape(card);
                         switch (color)
                         {
                             case CardColor.Red:
-                                gc.DrawString(count + " " + shape.ToString(), new Font("Consolas", 12.0f), Brushes.Red, new Point(1, 1));
+                                gc.DrawString(count + "-" + shape.ToString()[0], new Font("Consolas", 12.0f), Brushes.Red, new Point(1, 1));
                                 break;
                             case CardColor.Green:
-                                gc.DrawString(count + " " + shape.ToString(), new Font("Consolas", 12.0f), Brushes.Green, new Point(1, 1));
+                                gc.DrawString(count + "-" + shape.ToString()[0], new Font("Consolas", 12.0f), Brushes.Green, new Point(1, 1));
                                 break;
                             case CardColor.Blue:
-                                gc.DrawString(count + " " + shape.ToString(), new Font("Consolas", 12.0f), Brushes.Blue, new Point(1, 1));
+                                gc.DrawString(count + "-" + shape.ToString()[0], new Font("Consolas", 12.0f), Brushes.Blue, new Point(1, 1));
                                 break;
                         }
 

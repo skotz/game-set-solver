@@ -12,8 +12,15 @@ namespace Set_Game_Pattern_Matcher
     {
         public static unsafe bool IsWhite(byte* image, int startOffset)
         {
-            return image[startOffset + 2] >= Constants.threshold && image[startOffset + 1] >= Constants.threshold && image[startOffset] > Constants.threshold &&
-                Math.Abs(image[startOffset + 2] - image[startOffset + 1]) < Constants.variance && Math.Abs(image[startOffset + 1] - image[startOffset]) < Constants.variance && Math.Abs(image[startOffset] - image[startOffset + 2]) < Constants.variance;
+            return GetBrightness(image, startOffset) > Constants.WhiteMinBrightness &&
+                Math.Abs(image[startOffset + 2] - image[startOffset + 1]) < Constants.WhiteMaxVariance && 
+                Math.Abs(image[startOffset + 1] - image[startOffset]) < Constants.WhiteMaxVariance && 
+                Math.Abs(image[startOffset] - image[startOffset + 2]) < Constants.WhiteMaxVariance;
+        }
+
+        public static unsafe int GetBrightness(byte* image, int startOffset)
+        {
+            return (int)Math.Sqrt(image[startOffset + 2] * image[startOffset + 2] * .299 + image[startOffset + 1] * image[startOffset + 1] * .587 + image[startOffset] * image[startOffset] * .114);
         }
 
         public static unsafe bool IsWhite(byte* image, int x, int y, int stride)
