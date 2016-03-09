@@ -1,5 +1,4 @@
-﻿using ScottClayton.Image;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -15,9 +14,7 @@ namespace Set_Game_Pattern_Matcher
         public event EventHandler<Bitmap> OnDebugImage;
 
         private List<Pattern> shapePatterns;
-
-        int test = 1;
-
+        
         public SetGame()
         {
             shapePatterns = Pattern.LoadPrimaryPatterns();
@@ -90,6 +87,13 @@ namespace Set_Game_Pattern_Matcher
             // File.WriteAllText("card-" + (test++) + ".txt", blah + "\r\n" + averages.Select(x => x.ToString("0.00")).Aggregate((c, n) => c + "\r\n" + n));
         }
 
+        /// <summary>
+        /// Gets the number of a card
+        /// </summary>
+        /// <param name="img">The image to determine the number from</param>
+        /// <param name="color">The color of the card</param>
+        /// <param name="fromRight">Whether to search starting from the left (true) or the right (false)</param>
+        /// <returns></returns>
         private int GetCardNumber(Bitmap img, CardColor color, bool fromRight = false)
         {
             List<int> histogram = new List<int>();
@@ -136,6 +140,7 @@ namespace Set_Game_Pattern_Matcher
                 }
             }
             
+            // Based on the analysis of existing patterns
             if (average > 35.0)
             {
                 return 1;
