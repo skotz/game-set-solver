@@ -64,13 +64,13 @@ namespace Set_Game_Pattern_Matcher
             return Math.Sqrt(sum / (other.Image.Width * other.Image.Height * 3));
         }
 
-        public static List<Pattern> LoadPrimaryPatterns()
+        public static List<ShapeProfile> LoadPrimaryPatterns()
         {
-            List<Pattern> patterns = new List<Pattern>();
-
-            patterns.Add(new Pattern(ImageHelper.GetEmbeddedImage("diamond.png"), CardShape.Diamond));
-            patterns.Add(new Pattern(ImageHelper.GetEmbeddedImage("oval.png"), CardShape.Oval));
-            patterns.Add(new Pattern(ImageHelper.GetEmbeddedImage("squiggle.png"), CardShape.Squiggle));
+            List<ShapeProfile> patterns = new List<ShapeProfile>();
+            
+            patterns.Add(new ShapeProfile("4.00,2.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,2.00,4.00", CardShape.Oval));
+            patterns.Add(new ShapeProfile("8.00,7.00,6.00,4.50,3.00,2.00,1.00,0.00,0.00,1.00,2.00,3.00,4.50,6.00,7.00,8.00", CardShape.Diamond));
+            patterns.Add(new ShapeProfile("2.00,0.50,1.00,2.00,3.00,2.00,1.00,0.50,0.00,0.50,1.00,2.00,3.00,4.00,5.00,6.00", CardShape.Squiggle));
 
             return patterns;
         }

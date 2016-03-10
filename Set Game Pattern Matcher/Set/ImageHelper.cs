@@ -10,12 +10,32 @@ namespace Set_Game_Pattern_Matcher
 {
     class ImageHelper
     {
-        public static unsafe bool IsWhite(byte* image, int startOffset)
+        public static unsafe bool IsNearWhite(byte* image, int startOffset)
         {
             return GetBrightness(image, startOffset) > Constants.WhiteMinBrightness &&
                 Math.Abs(image[startOffset + 2] - image[startOffset + 1]) < Constants.WhiteMaxVariance && 
                 Math.Abs(image[startOffset + 1] - image[startOffset]) < Constants.WhiteMaxVariance && 
                 Math.Abs(image[startOffset] - image[startOffset + 2]) < Constants.WhiteMaxVariance;
+        }
+
+        public static unsafe bool IsWhite(byte* image, int startOffset)
+        {
+            return image[startOffset + 2] == 255 && image[startOffset + 1] == 255 && image[startOffset] == 255;
+        }
+
+        public static unsafe bool IsSimilarToColor(byte* image, int startOffset, LABColor color, double difference)
+        {
+            return AreColorsSimilar(GetLabColor(image, startOffset), color, difference);
+        }
+
+        public static unsafe bool AreColorsSimilar(LABColor a, LABColor b, double difference)
+        {
+            return LABColor.Distance(a, b) < difference;
+        }
+
+        public static unsafe LABColor GetLabColor(byte* image, int startOffset)
+        {
+            return LABColor.FromColor(image[startOffset + 2], image[startOffset + 1], image[startOffset]);
         }
 
         public static unsafe int GetBrightness(byte* image, int startOffset)
@@ -25,7 +45,7 @@ namespace Set_Game_Pattern_Matcher
 
         public static unsafe bool IsWhite(byte* image, int x, int y, int stride)
         {
-            return IsWhite(image, GetBmpDataIndex(x, y, stride));
+            return IsNearWhite(image, GetBmpDataIndex(x, y, stride));
         }
 
         public static int GetBmpDataIndex(int x, int y, int stride)

@@ -11,6 +11,7 @@ namespace Set_Game_Pattern_Matcher
         // Settings for determining whether a color is "white-ish"
         public const int WhiteMinBrightness = 128;
         public const int WhiteMaxVariance = 20;
+        public const double WhiteLabDeltaE = 7.5;
 
         // Settings for determining whether a rectangle is too small to be considered a card
         public const int minDimension = 40;

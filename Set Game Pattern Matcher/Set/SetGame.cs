@@ -13,7 +13,7 @@ namespace Set_Game_Pattern_Matcher
     {
         public event EventHandler<Bitmap> OnDebugImage;
 
-        private List<Pattern> shapePatterns;
+        private List<ShapeProfile> shapePatterns;
 
         int test = 1;
 
@@ -27,7 +27,7 @@ namespace Set_Game_Pattern_Matcher
         /// </summary>
         /// <param name="img">The image to determine the shape from</param>
         /// <returns></returns>
-        private CardShape GetCardShape(Bitmap img)
+        private CardShape GetCardShape(Bitmap img, bool fromRight = false)
         {
             List<int> histogram = new List<int>();
 
@@ -41,9 +41,10 @@ namespace Set_Game_Pattern_Matcher
                 // Create a histogram that represents the number of white pixels from the left border on each line
                 for (int y = 0; y < img.Height; y++)
                 {
-                    for (int x = 0; x < img.Width; x++)
+                    for (int x = 0; x < img.Width / 2; x++)
                     {
-                        int i = ImageHelper.GetBmpDataIndex(x, y, stride);
+                        int effectiveX = fromRight ? img.Width - 1 - x : x;
+                        int i = ImageHelper.GetBmpDataIndex(effectiveX, y, stride);
 
                         if (!ImageHelper.IsWhite(p, i))
                         {
@@ -56,9 +57,16 @@ namespace Set_Game_Pattern_Matcher
 
             img.UnlockBits(bmData);
 
+            // Remove outliers
+            if (histogram.Count > 5)
+            {
+                int mark = histogram[histogram.Count / 2];
+                histogram.RemoveAll(x => Math.Abs(mark - x) >= 5);
+            }
+
             // Group the histogram values into a buckets of averages
             List<double> averages = new List<double>();
-            int sections = 4;
+            int sections = 16;
             for (int i = 0; i < sections; i++)
             {
                 double sum = 0;
@@ -71,22 +79,17 @@ namespace Set_Game_Pattern_Matcher
                 sum /= actual;
                 averages.Add(sum);
             }
-
-            // Based on the data analysis of the histograms, these rules work quite well in determining the shape
-            if (averages[0] < averages[1] && averages[1] > averages[2] && averages[2] < averages[3])
+                        
+            if (histogram.Count < sections && !fromRight)
             {
-                return CardShape.Squiggle;
-            }
-            else if (averages[0] > averages[1] + 4 && averages[3] > averages[2] + 4)
-            {
-                return CardShape.Diamond;
+                return GetCardShape(img, true);
             }
             else
             {
-                return CardShape.Oval;
-            }
+                File.WriteAllText("card-" + (test++) + ".txt", ShapeProfile.GetShape(shapePatterns, averages).ToString() + "\r\n" + new ShapeProfile(averages).Profile.Select(x => x.ToString("0.00")).Aggregate((c, n) => c + "\r\n" + n));
 
-            // File.WriteAllText("card-" + (test++) + ".txt", blah + "\r\n" + averages.Select(x => x.ToString("0.00")).Aggregate((c, n) => c + "\r\n" + n));
+                return ShapeProfile.GetShape(shapePatterns, averages);
+            }
         }
 
         /// <summary>
@@ -116,14 +119,9 @@ namespace Set_Game_Pattern_Matcher
 
                         if (!ImageHelper.IsWhite(p, i))
                         {
-                            //p[i + 1] = 255;
                             histogram.Add(x);
                             break;
                         }
-                        //else
-                        //{
-                        //    p[i + 2] = 255;
-                        //}
                     }
                 }
             }
@@ -224,10 +222,12 @@ namespace Set_Game_Pattern_Matcher
 
             BitmapData bmData = img.LockBits(new Rectangle(0, 0, img.Width, img.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
             int stride = bmData.Stride;
-
+ 
             unsafe
             {
                 byte* p = (byte*)(void*)bmData.Scan0;
+
+                LABColor white = ImageHelper.GetLabColor(p, ImageHelper.GetBmpDataIndex(1, 1, stride));
 
                 for (int y = 0; y < img.Height; y++, lastX = 0)
                 {
@@ -251,7 +251,7 @@ namespace Set_Game_Pattern_Matcher
                         }
 
                         bool isWhite = ImageHelper.IsWhite(p, i);
-
+                        
                         if (Math.Abs(lastShade - brightness) > 5)
                         {
                             if (isWhite)
@@ -263,10 +263,6 @@ namespace Set_Game_Pattern_Matcher
                                     lineThickness.Add(x - lastX);
                                     lastX = 0;
                                 }
-
-                                //p[i + 2] = 255;
-                                //p[i + 1] = 0;
-                                //p[i] = 0;
                             }
                             else if (brightness > lastShade && !lastWhite)
                             {
@@ -277,28 +273,14 @@ namespace Set_Game_Pattern_Matcher
                                     lineThickness.Add(x - lastX);
                                     lastX = 0;
                                 }
-
-                                //p[i + 2] = 0;
-                                //p[i + 1] = 255;
-                                //p[i] = 0;
                             }
 
                             if (!isWhite && lastWhite)
                             {
                                 // We hit a line
                                 lastX = x;
-                                
-                                //p[i + 2] = 0;
-                                //p[i + 1] = 0;
-                                //p[i] = 255;
                             }
                         }
-                        //else
-                        //{
-                        //    p[i + 2] = 255;
-                        //    p[i + 1] = 255;
-                        //    p[i] = 255;
-                        //}
 
                         lastShade = brightness;
                         lastWhite = isWhite;
@@ -311,7 +293,7 @@ namespace Set_Game_Pattern_Matcher
             lineThickness.RemoveAll(x => x == 0);
             double average = lineThickness.Count > 0 ? lineThickness.Average() : 0;
 
-            //File.WriteAllText("card-" + (test++) + ".txt", jumpsToWhite + "\r\n" + jumpsToLighterColor + "\r\n" + average + "\r\n-----\r\n" + lineThickness.Select(x => x.ToString()).Aggregate((c, n) => c + "\r\n" + n));
+            // File.WriteAllText("card-" + (test++) + ".txt", jumpsToWhite + "\r\n" + jumpsToLighterColor + "\r\n" + average + "\r\n-----\r\n" + lineThickness.Select(x => x.ToString()).Aggregate((c, n) => c + "\r\n" + n));
 
             if (average > 8)
             {
@@ -325,6 +307,43 @@ namespace Set_Game_Pattern_Matcher
             {
                 return CardShading.Empty;
             }
+        }
+
+        private void CleanWhite(Bitmap img)
+        {
+            BitmapData bmData = img.LockBits(new Rectangle(0, 0, img.Width, img.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            int stride = bmData.Stride;
+
+            unsafe
+            {
+                byte* p = (byte*)(void*)bmData.Scan0;
+
+                List<LABColor> colors = new List<LABColor>();
+                colors.Add(ImageHelper.GetLabColor(p, ImageHelper.GetBmpDataIndex(1, 1, stride)));
+                colors.Add(ImageHelper.GetLabColor(p, ImageHelper.GetBmpDataIndex(img.Width - 1, img.Height - 1, stride)));
+
+                foreach (LABColor color in colors)
+                {
+                    for (int y = 0; y < img.Height; y++)
+                    {
+                        for (int x = 0; x < img.Width; x++)
+                        {
+                            int i = ImageHelper.GetBmpDataIndex(x, y, stride);
+
+                            bool isWhite = ImageHelper.IsSimilarToColor(p, i, color, Constants.WhiteLabDeltaE);
+
+                            if (isWhite)
+                            {
+                                p[i + 2] = 255;
+                                p[i + 1] = 255;
+                                p[i] = 255;
+                            }
+                        }
+                    }
+                }
+            }
+
+            img.UnlockBits(bmData);
         }
 
         public void FindSets(Bitmap b, int numberOfSets = 12)
@@ -389,6 +408,8 @@ namespace Set_Game_Pattern_Matcher
                             }
                         }
 
+                        CleanWhite(card);
+
                         // Re-initialize the graphics object in case we had to rotate it (to prevent cutoffs)
                         using (Graphics gc = Graphics.FromImage(card))
                         {
@@ -397,10 +418,10 @@ namespace Set_Game_Pattern_Matcher
                             CardShape shape = GetCardShape(card);
                             CardShading shade = GetCardShading(card, color);
 
-                            gc.DrawString(color.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 1));
-                            gc.DrawString(count.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 13));
-                            gc.DrawString(shape.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 25));
-                            gc.DrawString(shade.ToString(), new Font("Consolas", 12.0f), Brushes.White, new Point(1, 37));
+                            gc.DrawString(color.ToString(), new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 1));
+                            gc.DrawString(count.ToString(), new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 13));
+                            gc.DrawString(shape.ToString(), new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 25));
+                            gc.DrawString(shade.ToString(), new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 37));
 
                             card.Save("card-" + (cardNo++) + ".png", ImageFormat.Png);
                         }
