@@ -24,6 +24,11 @@ namespace Set_Game_Pattern_Matcher
             set = new SetGame();
             set.OnDebugImage += set_OnDebugImage;
             set.OnFindMatches += set_OnFindMatches;
+
+            if (!File.Exists("../../../Test Images/Google Images/setcards.jpg"))
+            {
+                testsToolStripMenuItem.Visible = false;
+            }
         }
 
         void set_OnDebugImage(object sender, Bitmap e)

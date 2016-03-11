@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Set_Game_Pattern_Matcher</RootNamespace>
-    <AssemblyName>Set Game Pattern Matcher</AssemblyName>
+    <AssemblyName>set-solver</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -32,6 +32,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>quasillamaicon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -94,6 +97,9 @@
     <EmbeddedResource Include="Patterns\diamond.png" />
     <EmbeddedResource Include="Patterns\oval.png" />
     <EmbeddedResource Include="Patterns\squiggle.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="quasillamaicon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
