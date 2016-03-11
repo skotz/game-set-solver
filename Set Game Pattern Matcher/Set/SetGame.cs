@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -13,7 +14,21 @@ namespace Set_Game_Pattern_Matcher
     {
         public event EventHandler<Bitmap> OnDebugImage;
 
-        int test = 1;
+        public event EventHandler<List<SetCardMatch>> OnFindMatches;
+
+        private BackgroundWorker findMatchesWorker;
+        private int workerCards;
+        private Bitmap workerImage;
+        private List<SetCardMatch> workerMatches;
+
+        // int test = 1;
+
+        public SetGame()
+        {
+            findMatchesWorker = new BackgroundWorker();
+            findMatchesWorker.DoWork += findMatchesWorker_DoWork;
+            findMatchesWorker.RunWorkerCompleted += findMatchesWorker_RunWorkerCompleted;
+        }
 
         /// <summary>
         /// Get the shape of a card
@@ -354,6 +369,29 @@ namespace Set_Game_Pattern_Matcher
             img.UnlockBits(bmData);
         }
 
+        public void GetMatchesAsync(Bitmap b, int numberOfCards = 12)
+        {
+            if (OnFindMatches != null && !findMatchesWorker.IsBusy)
+            {
+                workerCards = numberOfCards;
+                workerImage = b;
+                findMatchesWorker.RunWorkerAsync();
+            }
+        }
+
+        private void findMatchesWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (OnFindMatches != null)
+            {
+                OnFindMatches(this, workerMatches);
+            }
+        }
+
+        private void findMatchesWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            workerMatches = GetMatches(workerImage, workerCards);
+        }
+
         public List<SetCardMatch> GetMatches(Bitmap b, int numberOfCards = 12)
         {
             List<SetCard> cards = GetCards(b, numberOfCards);
@@ -365,23 +403,22 @@ namespace Set_Game_Pattern_Matcher
             
             foreach (SetCardMatch match in matches)
             {
-                using (Bitmap copy = ImageHelper.Copy(b))
+                Bitmap copy = ImageHelper.Copy(b);
+                using (Graphics g = Graphics.FromImage(copy))
                 {
-                    using (Graphics g = Graphics.FromImage(copy))
+                    foreach (SetCard card in match.Cards)
                     {
-                        foreach (SetCard card in match.Cards)
-                        {
-                            g.DrawRectangle(new Pen(Brushes.Red, 3.0f), card.OriginalRectangle);
-                        }
+                        g.DrawRectangle(new Pen(Brushes.Red, 3.0f), card.OriginalRectangle);
                     }
-
-                    copy.Save("set-" + (setNumber++) + ".png", ImageFormat.Png);
                 }
+
+                match.Image = copy;
+                copy.Save("set-" + (setNumber++) + ".png", ImageFormat.Png);
             }
 
             if (OnDebugImage != null)
             {
-                OnDebugImage(this, b);
+                OnDebugImage.Raise(this, b);
             }
 
             return matches;
@@ -392,7 +429,10 @@ namespace Set_Game_Pattern_Matcher
             List<SetCard> cards = new List<SetCard>();
             b = ImageHelper.Resize(b, Constants.MaxImageDimention);
 
-            // b.Save("resized.png", ImageFormat.Png);
+            if (OnDebugImage != null)
+            {
+                OnDebugImage.Raise(this, ImageHelper.Copy(b));
+            }
 
             Rectangle temp;
             List<Rectangle> sets = new List<Rectangle>();
@@ -474,7 +514,7 @@ namespace Set_Game_Pattern_Matcher
 
             if (OnDebugImage != null)
             {
-                OnDebugImage(this, b);
+                OnDebugImage.Raise(this, b);
             }
 
             return cards;
