@@ -33,21 +33,21 @@ namespace Set_Game_Pattern_Matcher
         {
             Bitmap b = (Bitmap)Bitmap.FromFile("../../../Test Images/Google Images/setcards.jpg");
 
-            set.FindSets(b, (int)numericUpDown1.Value);
+            set.GetMatches(b, (int)numericUpDown1.Value);
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             Bitmap b = (Bitmap)Bitmap.FromFile("../../../Test Images/Google Images/set2.jpg");
 
-            set.FindSets(b, (int)numericUpDown1.Value);
+            set.GetMatches(b, (int)numericUpDown1.Value);
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
             Bitmap b = (Bitmap)Bitmap.FromFile("../../../Test Images/Pictures/test-03.png");
 
-            set.FindSets(b, (int)numericUpDown1.Value);
+            set.GetMatches(b, (int)numericUpDown1.Value);
         }
     }
 }

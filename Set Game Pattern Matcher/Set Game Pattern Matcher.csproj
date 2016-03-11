@@ -62,8 +62,9 @@
     <Compile Include="Set\Extensions.cs" />
     <Compile Include="Set\ImageHelper.cs" />
     <Compile Include="Set\Pattern.cs" />
+    <Compile Include="Set\SetCard.cs" />
+    <Compile Include="Set\SetCardMatch.cs" />
     <Compile Include="Set\SetGame.cs" />
-    <Compile Include="Set\ShapeProfile.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>

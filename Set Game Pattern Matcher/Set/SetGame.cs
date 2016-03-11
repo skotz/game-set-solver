@@ -13,14 +13,7 @@ namespace Set_Game_Pattern_Matcher
     {
         public event EventHandler<Bitmap> OnDebugImage;
 
-        private List<ShapeProfile> shapePatterns;
-
         int test = 1;
-
-        public SetGame()
-        {
-            shapePatterns = Pattern.LoadPrimaryPatterns();
-        }
 
         /// <summary>
         /// Get the shape of a card
@@ -66,7 +59,7 @@ namespace Set_Game_Pattern_Matcher
 
             // Group the histogram values into a buckets of averages
             List<double> averages = new List<double>();
-            int sections = 16;
+            int sections = 5;
             for (int i = 0; i < sections; i++)
             {
                 double sum = 0;
@@ -79,16 +72,25 @@ namespace Set_Game_Pattern_Matcher
                 sum /= actual;
                 averages.Add(sum);
             }
-                        
-            if (histogram.Count < sections && !fromRight)
+
+            // Normalize
+            double min = averages.Min();
+            double diff = averages.Max() - min;
+            averages = averages.Select(x => (x - min) / diff).ToList();
+
+            // File.WriteAllText("card-" + (test++) + ".txt", averages.Select(x => x.ToString("0.00")).Aggregate((c, n) => c + "\r\n" + n));
+
+            if (averages[1] > averages[0] && averages[2] > averages[0] && averages[2] > averages[3] && averages[4] > averages[3])
             {
-                return GetCardShape(img, true);
+                return CardShape.Squiggle;
+            }
+            else if (averages[2] < 0.05 && averages[0] > averages[1] && averages[4] > averages[3] && averages[1] > averages[2] && averages[3] > averages[2])
+            {
+                return CardShape.Diamond;
             }
             else
             {
-                File.WriteAllText("card-" + (test++) + ".txt", ShapeProfile.GetShape(shapePatterns, averages).ToString() + "\r\n" + new ShapeProfile(averages).Profile.Select(x => x.ToString("0.00")).Aggregate((c, n) => c + "\r\n" + n));
-
-                return ShapeProfile.GetShape(shapePatterns, averages);
+                return CardShape.Oval;
             }
         }
 
@@ -117,7 +119,7 @@ namespace Set_Game_Pattern_Matcher
                         int effectiveX = fromRight ? img.Width - 1 - x : x;
                         int i = ImageHelper.GetBmpDataIndex(effectiveX, y, stride);
 
-                        if (!ImageHelper.IsWhite(p, i))
+                        if (!ImageHelper.IsWhite(p, i) && x > 1)
                         {
                             histogram.Add(x);
                             break;
@@ -130,7 +132,7 @@ namespace Set_Game_Pattern_Matcher
 
             double average = histogram.Count > 0 ? histogram.Average() : 0;
 
-            if (average > (Constants.cardWidth / 2) - 3 || histogram.Count < 5)
+            if (average > (Constants.CardWidth / 2) - 3 || histogram.Count < 5)
             {
                 // Since our average indicates that nearly every pixel in the left half of the image is white, count again starting from the right
                 if (!fromRight)
@@ -138,13 +140,15 @@ namespace Set_Game_Pattern_Matcher
                     return GetCardNumber(img, true);
                 }
             }
-            
+
+            // File.WriteAllText("card-" + (test++) + ".txt", average.ToString());
+
             // Based on the analysis of existing patterns
             if (average > 35.0)
             {
                 return 1;
             }
-            else if (average > 15.0)
+            else if (average > 16.0)
             {
                 return 2;
             }
@@ -152,8 +156,6 @@ namespace Set_Game_Pattern_Matcher
             {
                 return 3;
             }
-
-            // File.WriteAllText("card-" + (test++) + ".txt", blah + "\r\n" + average.ToString());
         }
 
         /// <summary>
@@ -213,7 +215,8 @@ namespace Set_Game_Pattern_Matcher
         /// <returns></returns>
         private CardShading GetCardShading(Bitmap img, CardColor color)
         {
-            int lastShade = 0;
+            int lastShade = 255;
+            LABColor lastColor = LABColor.FromColor(255, 255, 255);
             bool lastWhite = true;
             int jumpsToWhite = 0;
             int jumpsToLighterColor = 0;
@@ -235,24 +238,26 @@ namespace Set_Game_Pattern_Matcher
                     {
                         int i = ImageHelper.GetBmpDataIndex(x, y, stride);
 
+                        LABColor currentColor = ImageHelper.GetLabColor(p, i);
+                        bool isWhite = ImageHelper.IsWhite(p, i);
+                        double colorDiff = LABColor.Distance(currentColor, lastColor);
+
                         int brightness;
                         switch (color)
                         {
                             case CardColor.Red:
-                                brightness = p[i + 2];
+                                brightness = p[i + 1] + p[i];
                                 break;
                             case CardColor.Green:
-                                brightness = p[i + 1];
+                                brightness = p[i + 2] + p[i];
                                 break;
                             case CardColor.Blue:
                             default:
-                                brightness = p[i];
+                                brightness = p[i + 1] + p[i + 2];
                                 break;
                         }
 
-                        bool isWhite = ImageHelper.IsWhite(p, i);
-                        
-                        if (Math.Abs(lastShade - brightness) > 5)
+                        if (colorDiff > 5.0)
                         {
                             if (isWhite)
                             {
@@ -282,6 +287,7 @@ namespace Set_Game_Pattern_Matcher
                             }
                         }
 
+                        lastColor = currentColor;
                         lastShade = brightness;
                         lastWhite = isWhite;
                     }
@@ -299,7 +305,7 @@ namespace Set_Game_Pattern_Matcher
             {
                 return CardShading.Filled;
             }
-            if (jumpsToLighterColor > jumpsToWhite)
+            if (jumpsToLighterColor > jumpsToWhite * 2)
             {
                 return CardShading.Shaded;
             }
@@ -321,6 +327,8 @@ namespace Set_Game_Pattern_Matcher
                 List<LABColor> colors = new List<LABColor>();
                 colors.Add(ImageHelper.GetLabColor(p, ImageHelper.GetBmpDataIndex(1, 1, stride)));
                 colors.Add(ImageHelper.GetLabColor(p, ImageHelper.GetBmpDataIndex(img.Width - 1, img.Height - 1, stride)));
+                colors.Add(ImageHelper.GetLabColor(p, ImageHelper.GetBmpDataIndex(1, img.Height - 1, stride)));
+                colors.Add(ImageHelper.GetLabColor(p, ImageHelper.GetBmpDataIndex(img.Width - 1, 1, stride)));
 
                 foreach (LABColor color in colors)
                 {
@@ -346,9 +354,43 @@ namespace Set_Game_Pattern_Matcher
             img.UnlockBits(bmData);
         }
 
-        public void FindSets(Bitmap b, int numberOfSets = 12)
+        public List<SetCardMatch> GetMatches(Bitmap b, int numberOfCards = 12)
         {
-            b = ImageHelper.Resize(b, 600);
+            List<SetCard> cards = GetCards(b, numberOfCards);
+            List<SetCardMatch> matches = SetCardMatch.GetMatches(cards);
+
+            int setNumber = 1;
+
+            b = ImageHelper.Resize(b, Constants.MaxImageDimention);
+            
+            foreach (SetCardMatch match in matches)
+            {
+                using (Bitmap copy = ImageHelper.Copy(b))
+                {
+                    using (Graphics g = Graphics.FromImage(copy))
+                    {
+                        foreach (SetCard card in match.Cards)
+                        {
+                            g.DrawRectangle(new Pen(Brushes.Red, 3.0f), card.OriginalRectangle);
+                        }
+                    }
+
+                    copy.Save("set-" + (setNumber++) + ".png", ImageFormat.Png);
+                }
+            }
+
+            if (OnDebugImage != null)
+            {
+                OnDebugImage(this, b);
+            }
+
+            return matches;
+        }
+
+        public List<SetCard> GetCards(Bitmap b, int numberOfCards = 12)
+        {
+            List<SetCard> cards = new List<SetCard>();
+            b = ImageHelper.Resize(b, Constants.MaxImageDimention);
 
             // b.Save("resized.png", ImageFormat.Png);
 
@@ -371,15 +413,10 @@ namespace Set_Game_Pattern_Matcher
                         {
                             temp = TraceSet(p, x, y, b.Width, b.Height, stride);
 
-                            if (temp.Area() >= Constants.minArea && temp.Width >= Constants.minDimension && temp.Height > Constants.minDimension)
+                            if (temp.Area() >= Constants.MinArea && temp.Width >= Constants.MinDimension && temp.Height > Constants.MinDimension)
                             {
                                 sets.Add(temp);
                             }
-
-                            //int i = ImageHelper.GetBmpDataIndex(x, y, stride);
-                            //p[i + 2] = 255;
-                            //p[i + 1] = 255;
-                            //p[i] = 255;
                         }
                     }
                 }
@@ -388,7 +425,7 @@ namespace Set_Game_Pattern_Matcher
             b.UnlockBits(bmData);
 
             RemoveOverlaps(sets);
-            KeepTopSets(sets, numberOfSets);
+            KeepTopSets(sets, numberOfCards);
 
             int cardNo = 1;
 
@@ -397,7 +434,7 @@ namespace Set_Game_Pattern_Matcher
                 foreach (Rectangle r in sets)
                 {
                     bool tall = r.Height > r.Width;
-                    using (Bitmap card = new Bitmap(tall ? Constants.cardHeight : Constants.cardWidth, tall ? Constants.cardWidth : Constants.cardHeight))
+                    using (Bitmap card = new Bitmap(tall ? Constants.CardHeight : Constants.CardWidth, tall ? Constants.CardWidth : Constants.CardHeight))
                     {
                         using (Graphics gc = Graphics.FromImage(card))
                         {
@@ -410,14 +447,16 @@ namespace Set_Game_Pattern_Matcher
 
                         CleanWhite(card);
 
+                        CardColor color = GetCardColor(card);
+                        int count = GetCardNumber(card);
+                        CardShape shape = GetCardShape(card);
+                        CardShading shade = GetCardShading(card, color);
+
+                        cards.Add(new SetCard(count, shape, shade, color, r));
+
                         // Re-initialize the graphics object in case we had to rotate it (to prevent cutoffs)
                         using (Graphics gc = Graphics.FromImage(card))
                         {
-                            CardColor color = GetCardColor(card);
-                            int count = GetCardNumber(card);
-                            CardShape shape = GetCardShape(card);
-                            CardShading shade = GetCardShading(card, color);
-
                             gc.DrawString(color.ToString(), new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 1));
                             gc.DrawString(count.ToString(), new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 13));
                             gc.DrawString(shape.ToString(), new Font("Consolas", 12.0f), Brushes.Black, new Point(1, 25));
@@ -427,7 +466,7 @@ namespace Set_Game_Pattern_Matcher
                         }
                     }
 
-                    g.DrawRectangle(Pens.Red, r);
+                    g.DrawRectangle(new Pen(Brushes.Blue, 3.0f), r);
                 }
             }
 
@@ -437,6 +476,8 @@ namespace Set_Game_Pattern_Matcher
             {
                 OnDebugImage(this, b);
             }
+
+            return cards;
         }
 
         /// <summary>
